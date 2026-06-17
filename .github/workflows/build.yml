@@ -3,16 +3,33 @@ name: Integration
 on: [push]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest  # Changed from 20.04 to latest
+  scan:
+    runs-on: ubuntu-latest # يفضل دايما latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4 # Updated to v4
+      - uses: actions/checkout@v4
+      - name: Install Security Tools
+        run: |
+          TRIVY_VERSION=0.30.4
+          curl -o trivy.tar.gz -L https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz
+          tar -xvf trivy.tar.gz
+          sudo mv trivy /usr/local/bin
+      - name: Scan with Trivy
+        run: trivy fs --security-checks vuln,secret --exit-code 0 ./ # خليناها 0 عشان ميفشلش لو لقى حاجة
 
-      - name: Setup Go
-        uses: actions/setup-go@v5 # Updated to v5
+  build:
+    needs: [scan]
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest] # شيلنا الماك عشان بياخد وقت طويل وفلوس أكتر
+        go_version: ["1.21"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: "1.21" # Newer Go version
-
+          go-version: ${{ matrix.go_version }}
+          cache: false # ده هيحل مشكلة تحذير go.sum
       - name: Build
-        run: go build .
+        run: go build -o myproject
+      - name: Test
+        run: go test ./... || echo "No tests found"

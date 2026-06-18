@@ -26,7 +26,7 @@ jobs:
 
       - name: Build
         # بناء البرنامج وتسميته
-        run: go build -v -o myproject
+        run: go build -v -o myproject .
 
       - name: Upload Binary
         # رفع الملف الناتج عشان تقدر تحمله من موقع جيت هاب
